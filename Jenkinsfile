@@ -7,11 +7,11 @@ pipeline {
 
     environment {
         NODE_ENV = 'production'
-        MONGODB_URI = credentials('mongodb-uri')
-        JWT_SECRET = credentials('jwt-secret')
-        CLOUDINARY_CLOUD_NAME = credentials('cloudinary-cloud-name')
-        CLOUDINARY_API_KEY = credentials('cloudinary-api-key')
-        CLOUDINARY_API_SECRET = credentials('cloudinary-api-secret')
+        MONGODB_URI = credentials('MONGODB_URI')
+        JWT_SECRET = credentials('JWT_SECRET')
+        CLOUDINARY_CLOUD_NAME = credentials('CLOUDINARY_CLOUD_NAME')
+        CLOUDINARY_API_KEY = credentials('CLOUDINARY_API_KEY ')
+        CLOUDINARY_API_SECRET = credentials('CLOUDINARY_API_SECRET')
         PORT = '5001'
     }
 
