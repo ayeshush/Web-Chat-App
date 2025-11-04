@@ -25,8 +25,8 @@ pipeline {
                     echo 'Repository checked out successfully'
 
                     // Display git information
-                    sh 'git log --oneline -5'
-                    sh 'git branch'
+                    bat 'git log --oneline -5'
+                    bat 'git branch'
                 }
             }
         }
@@ -38,20 +38,20 @@ pipeline {
                     echo 'Starting compile and build process...'
 
                     // Install root dependencies
-                    sh 'npm ci'
+                    bat 'npm ci'
 
                     // Parallel installation of frontend and backend dependencies
                     parallel(
                         'Install Frontend Dependencies': {
                             dir('frontend') {
                                 echo 'Installing frontend dependencies...'
-                                sh 'npm ci'
+                                bat 'npm ci'
                             }
                         },
                         'Install Backend Dependencies': {
                             dir('backend') {
                                 echo 'Installing backend dependencies...'
-                                sh 'npm ci'
+                                bat 'npm ci'
                             }
                         }
                     )
@@ -59,7 +59,7 @@ pipeline {
                     // Build frontend application
                     dir('frontend') {
                         echo 'Building frontend application...'
-                        sh 'npm run build'
+                        bat 'npm run build'
                         echo 'Frontend build completed successfully'
                     }
 
@@ -76,7 +76,7 @@ pipeline {
                     echo 'Packaging application for deployment...'
 
                     // Create deployment package
-                    sh '''
+                    bat '''
                         mkdir -p deployment-package
                         cp -r backend/* deployment-package/
                         cp -r frontend/dist deployment-package/
@@ -86,7 +86,7 @@ pipeline {
                     '''
 
                     // Create tarball for deployment
-                    sh '''
+                    bat '''
                         tar -czf web-chat-app-${BUILD_NUMBER}.tar.gz deployment-package/
                         echo "Application packaged successfully: web-chat-app-${BUILD_NUMBER}.tar.gz"
                     '''
@@ -153,7 +153,7 @@ pipeline {
                 cleanWs()
 
                 // Remove node_modules and other temporary files
-                sh 'rm -rf node_modules frontend/node_modules backend/node_modules deployment-package web-chat-app-*.tar.gz'
+                bat 'rm -rf node_modules frontend/node_modules backend/node_modules deployment-package web-chat-app-*.tar.gz'
 
                 echo 'Workspace cleaned successfully'
             }
@@ -169,10 +169,10 @@ def deployToProduction() {
         try {
             // Example deployment commands - customize based on your infrastructure
 
-            // Option 1: SSH deployment to production server
-            // sh '''
+            // Option 1: Sbat deployment to production server
+            // bat '''
             //     scp web-chat-app-${BUILD_NUMBER}.tar.gz user@production-server:/opt/apps/
-            //     ssh user@production-server "
+            //     sbat user@production-server "
             //         cd /opt/apps &&
             //         tar -xzf web-chat-app-${BUILD_NUMBER}.tar.gz &&
             //         cd deployment-package &&
@@ -182,14 +182,14 @@ def deployToProduction() {
             // '''
 
             // Option 2: Docker deployment
-            // sh '''
+            // bat '''
             //     docker build -t web-chat-app:${BUILD_NUMBER} .
             //     docker tag web-chat-app:${BUILD_NUMBER} web-chat-app:latest
             //     docker-compose -f docker-compose.prod.yml up -d
             // '''
 
             // Option 3: Kubernetes deployment
-            // sh '''
+            // bat '''
             //     kubectl set image deployment/web-chat-app web-chat-app=web-chat-app:${BUILD_NUMBER} -n production
             //     kubectl rollout status deployment/web-chat-app -n production
             // '''
@@ -208,7 +208,7 @@ def deployToStaging() {
     script {
         try {
             // Similar deployment logic for staging environment
-            // sh 'scp web-chat-app-${BUILD_NUMBER}.tar.gz user@staging-server:/opt/apps/staging/'
+            // bat 'scp web-chat-app-${BUILD_NUMBER}.tar.gz user@staging-server:/opt/apps/staging/'
             // ... staging deployment commands
 
             echo 'Staging deployment completed successfully'
