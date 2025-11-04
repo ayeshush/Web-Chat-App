@@ -43,20 +43,20 @@ pipeline {
                     bat 'if exist backend\\node_modules rmdir /s /q backend\\node_modules'
 
                     // Install root dependencies
-                    bat 'npm ci'
+                    bat 'npm install'
 
                     // Parallel installation of frontend and backend dependencies
                     parallel(
                         'Install Frontend Dependencies': {
                             dir('frontend') {
                                 echo 'Installing frontend dependencies...'
-                                bat 'npm ci'
+                                bat 'npm install'
                             }
                         },
                         'Install Backend Dependencies': {
                             dir('backend') {
                                 echo 'Installing backend dependencies...'
-                                bat 'npm ci'
+                                bat 'npm install'
                             }
                         }
                     )
