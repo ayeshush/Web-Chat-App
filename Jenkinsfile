@@ -10,7 +10,7 @@ pipeline {
         MONGODB_URI = credentials('MONGODB_URI')
         JWT_SECRET = credentials('JWT_SECRET')
         CLOUDINARY_CLOUD_NAME = credentials('CLOUDINARY_CLOUD_NAME')
-        CLOUDINARY_API_KEY = credentials('CLOUDINARY_API_KEY ')
+        CLOUDINARY_API_KEY = credentials('CLOUDINARY_API_KEY')
         CLOUDINARY_API_SECRET = credentials('CLOUDINARY_API_SECRET')
         PORT = '5001'
     }
@@ -36,6 +36,11 @@ pipeline {
             steps {
                 script {
                     echo 'Starting compile and build process...'
+
+                    // Clean previous installations
+                    bat 'if exist node_modules rmdir /s /q node_modules'
+                    bat 'if exist frontend\\node_modules rmdir /s /q frontend\\node_modules'
+                    bat 'if exist backend\\node_modules rmdir /s /q backend\\node_modules'
 
                     // Install root dependencies
                     bat 'npm ci'
@@ -68,28 +73,29 @@ pipeline {
             }
         }
 
-  
-        // Stage 3: Packaging
+        // Stage 3: Package/Bundle
         stage('Package/Bundle') {
             steps {
                 script {
                     echo 'Packaging application for deployment...'
 
-                    // Create deployment package
-                    bat '''
-                        mkdir -p deployment-package
-                        cp -r backend/* deployment-package/
-                        cp -r frontend/dist deployment-package/
-                        cp package.json deployment-package/
-                        cp Dockerfile deployment-package/  # if using Docker
-                        cp -r k8s/ deployment-package/     # if using Kubernetes manifests
-                    '''
+                    // Clean previous deployment package
+                    bat 'if exist deployment-package rmdir /s /q deployment-package'
+                    bat 'if exist web-chat-app-.tar.gz del /q web-chat-app-.tar.gz'
 
-                    // Create tarball for deployment
-                    bat '''
-                        tar -czf web-chat-app-${BUILD_NUMBER}.tar.gz deployment-package/
-                        echo "Application packaged successfully: web-chat-app-${BUILD_NUMBER}.tar.gz"
-                    '''
+                    // Create deployment package
+                    bat 'mkdir deployment-package'
+                    bat 'xcopy /e /i /y backend\\* deployment-package\\'
+                    bat 'xcopy /e /i /y frontend\\dist deployment-package\\dist'
+                    bat 'copy /y package.json deployment-package\\'
+
+                    // Copy additional files if they exist
+                    bat 'if exist Dockerfile copy /y Dockerfile deployment-package\\'
+                    bat 'if exist k8s\\* xcopy /e /i /y k8s\\* deployment-package\\k8s\\'
+
+                    // Create tarball for deployment (requires tar to be installed)
+                    bat 'tar -czf web-chat-app-%BUILD_NUMBER%.tar.gz deployment-package\\'
+                    echo "Application packaged successfully: web-chat-app-%BUILD_NUMBER%.tar.gz"
 
                     echo 'Application packaging completed'
                 }
@@ -129,7 +135,6 @@ pipeline {
                 archiveArtifacts artifacts: 'web-chat-app-*.tar.gz', allowEmptyArchive: true
                 archiveArtifacts artifacts: 'frontend/dist//*', allowEmptyArchive: true
 
-  
                 echo 'Build artifacts archived successfully'
             }
         }
@@ -152,8 +157,14 @@ pipeline {
                 echo '🧹 Cleaning up workspace...'
                 cleanWs()
 
-                // Remove node_modules and other temporary files
-                bat 'rm -rf node_modules frontend/node_modules backend/node_modules deployment-package web-chat-app-*.tar.gz'
+                // Clean up Windows-specific files
+                bat '''
+                if exist node_modules rmdir /s /q node_modules
+                if exist frontend\\node_modules rmdir /s /q frontend\\node_modules
+                if exist backend\\node_modules rmdir /s /q backend\\node_modules
+                if exist deployment-package rmdir /s /q deployment-package
+                if exist web-chat-app-.tar.gz del /q web-chat-app-.tar.gz
+                '''
 
                 echo 'Workspace cleaned successfully'
             }
@@ -169,29 +180,29 @@ def deployToProduction() {
         try {
             // Example deployment commands - customize based on your infrastructure
 
-            // Option 1: Sbat deployment to production server
-            // bat '''
-            //     scp web-chat-app-${BUILD_NUMBER}.tar.gz user@production-server:/opt/apps/
-            //     sbat user@production-server "
-            //         cd /opt/apps &&
-            //         tar -xzf web-chat-app-${BUILD_NUMBER}.tar.gz &&
-            //         cd deployment-package &&
-            //         npm install --production &&
-            //         pm2 restart web-chat-app
-            //     "
-            // '''
+            // Option 1: PowerShell-based deployment to production server
+            powershell '''
+                $packagePath = "web-chat-app-$env:BUILD_NUMBER.tar.gz"
+                $server = "production-server"
+                $remotePath = "/opt/apps/"
 
-            // Option 2: Docker deployment
-            // bat '''
-            //     docker build -t web-chat-app:${BUILD_NUMBER} .
-            //     docker tag web-chat-app:${BUILD_NUMBER} web-chat-app:latest
-            //     docker-compose -f docker-compose.prod.yml up -d
-            // '''
+                # Copy package to production server
+                scp $packagePath "user@$server`:$remotePath"
 
-            // Option 3: Kubernetes deployment
+                # Extract and deploy on remote server
+                ssh "user@$server" @"
+                    cd $remotePath
+                    tar -xzf $packagePath
+                    cd deployment-package
+                    npm install --production
+                    pm2 restart web-chat-app
+"@
+            '''
+
+            // Option 2: Windows-based deployment using Robocopy
             // bat '''
-            //     kubectl set image deployment/web-chat-app web-chat-app=web-chat-app:${BUILD_NUMBER} -n production
-            //     kubectl rollout status deployment/web-chat-app -n production
+            //     robocopy deployment-package \\\\production-server\\opt\\apps\\web-chat-app /E /MIR
+            //     psexec \\\\production-server -u user -p password "cd /opt/apps/web-chat-app && npm install --production && pm2 restart web-chat-app"
             // '''
 
             echo 'Production deployment completed successfully'
@@ -207,9 +218,12 @@ def deployToStaging() {
 
     script {
         try {
-            // Similar deployment logic for staging environment
-            // bat 'scp web-chat-app-${BUILD_NUMBER}.tar.gz user@staging-server:/opt/apps/staging/'
-            // ... staging deployment commands
+            // Staging deployment commands
+            bat '''
+                echo "Deploying to staging environment..."
+                :: Add your staging deployment commands here
+                :: robocopy deployment-package \\\\staging-server\\opt\\apps\\staging /E
+            '''
 
             echo 'Staging deployment completed successfully'
 
@@ -225,6 +239,15 @@ def deployToDevelopment() {
     script {
         try {
             // Development environment deployment (less strict)
+            bat '''
+                echo "Deploying to development environment..."
+                :: Local development deployment
+                if exist "C:\\dev\\web-chat-app" rmdir /s /q "C:\\dev\\web-chat-app"
+                xcopy /e /i /y deployment-package "C:\\dev\\web-chat-app"
+                cd /d "C:\\dev\\web-chat-app"
+                npm install --production
+            '''
+
             echo 'Development deployment completed successfully'
 
         } catch (Exception e) {
