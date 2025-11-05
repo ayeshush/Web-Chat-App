@@ -1,73 +1,57 @@
 pipeline {
     agent any
-
-    tools {
-        nodejs 'NodeJS20'
-    }
+    tools { nodejs 'NodeJS20' }
 
     environment {
-        NODE_ENV = 'development'  // Ensures devDependencies like @vitejs/plugin-react install
+        NODE_ENV = 'production'
+        MONGODB_URI = credentials('MONGODB_URI')
+        JWT_SECRET = credentials('JWT_SECRET')
+        CLOUDINARY_CLOUD_NAME = credentials('CLOUDINARY_CLOUD_NAME')
+        CLOUDINARY_API_KEY = credentials('CLOUDINARY_API_KEY')
+        CLOUDINARY_API_SECRET = credentials('CLOUDINARY_API_SECRET')
+        PORT = '5001'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                echo '📦 Checking out code...'
                 checkout scm
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Install & Build') {
             steps {
                 script {
-                    echo '📥 Installing dependencies...'
-                    // Clean old node_modules
                     bat '''
                     if exist node_modules rmdir /s /q node_modules
                     if exist frontend\\node_modules rmdir /s /q frontend\\node_modules
                     if exist backend\\node_modules rmdir /s /q backend\\node_modules
                     '''
 
-                    // Install frontend & backend deps
                     dir('frontend') {
-                        bat 'set NODE_ENV=development && npm install'
+                        bat 'npm install'
+                        bat 'npm run build'
                     }
+
                     dir('backend') {
                         bat 'npm install'
+                        bat 'node --check src/index.js'   // ✅ Syntax check instead of running server
                     }
-                }
-            }
-        }
-
-        stage('Build Frontend') {
-            steps {
-                dir('frontend') {
-                    echo '🏗 Building frontend...'
-                    bat 'set NODE_ENV=development && npm run build'
-                }
-            }
-        }
-
-        stage('Run Backend') {
-            steps {
-                dir('backend') {
-                    echo '🚀 Starting backend server...'
-                    bat 'npm start'
                 }
             }
         }
     }
 
     post {
-        success {
-            echo '✅ Build completed successfully!'
-        }
-        failure {
-            echo '❌ Build failed! Check Jenkins logs for details.'
-        }
-        cleanup {
+        always {
             echo '🧹 Cleaning workspace...'
             cleanWs()
+        }
+        success {
+            echo '✅ Build finished successfully!'
+        }
+        failure {
+            echo '❌ Build failed. Check console output.'
         }
     }
 }
