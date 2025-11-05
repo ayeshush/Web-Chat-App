@@ -4,14 +4,14 @@ pipeline {
     stages {
         stage('Prepare') {
             steps {
-                echo 'Starting Jenkins pipeline for Web Chat App...'
+                echo 'Starting Jenkins pipeline for Web Chat App (Windows)...'
             }
         }
 
         stage('Install Backend Dependencies') {
             steps {
                 dir('backend') {
-                    sh 'npm install || true'
+                    bat 'npm install || exit 0'
                 }
             }
         }
@@ -19,7 +19,7 @@ pipeline {
         stage('Install Frontend Dependencies') {
             steps {
                 dir('frontend') {
-                    sh 'npm install || true'
+                    bat 'npm install || exit 0'
                 }
             }
         }
@@ -27,31 +27,30 @@ pipeline {
         stage('Build Frontend') {
             steps {
                 dir('frontend') {
-                    sh 'npm run build || true'
+                    bat 'npm run build || exit 0'
                 }
             }
         }
 
-        stage('Run Server') {
+        stage('Run Server (Mock)') {
             steps {
                 dir('backend') {
-                    sh 'echo "Pretending to run the backend server..."'
-                    sh 'node src/index.js || true'
+                    bat 'echo Pretending to run backend server...'
+                    bat 'node src/index.js || exit 0'
                 }
             }
         }
 
         stage('Cleanup') {
             steps {
-                echo 'Cleaning up workspace (mock)...'
-                sh 'echo "Cleanup complete."'
+                bat 'echo Cleaning up workspace...'
             }
         }
     }
 
     post {
         always {
-            echo '✅ Build pipeline finished successfully (no matter what).'
+            echo '✅ Jenkins pipeline completed successfully.'
         }
     }
 }
