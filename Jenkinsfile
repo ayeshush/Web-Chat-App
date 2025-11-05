@@ -6,7 +6,7 @@ pipeline {
     }
 
     environment {
-        PORT = '5000'
+        PORT = '5001'
         NODE_ENV = 'production'
         MONGO_URI = credentials('MONGO_URI')
         JWT_SECRET = credentials('JWT_SECRET')
