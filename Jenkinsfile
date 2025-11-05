@@ -64,7 +64,7 @@ pipeline {
                     // Build frontend application
                     dir('frontend') {
                         echo 'Building frontend application...'
-                        bat 'npm run build'
+                        bat 'npm run build --verbose'
                         echo 'Frontend build completed successfully'
                     }
 
